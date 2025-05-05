@@ -52,12 +52,15 @@ fun AppNavigation() {
             )
         ) { backStackEntry ->
             val pdfUrl = Uri.decode(backStackEntry.arguments?.getString("pdfUrl") ?: "")
+            val bookId = backStackEntry.arguments?.getString("bookId")?:""
             val context = LocalContext.current
 
             // Launch the PDF view activity
             LaunchedEffect(Unit) {
                 val intent = Intent(context, PDFViewActivity::class.java)
                 intent.putExtra("pdfUrl", pdfUrl)
+                intent.putExtra("bookId", bookId) // Unique ID for saving progress
+
                 context.startActivity(intent)
             }
         }

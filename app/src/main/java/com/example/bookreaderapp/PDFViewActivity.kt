@@ -1,15 +1,12 @@
 package com.example.bookreaderapp
 
-
-
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import java.io.File
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
+import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-
+import java.io.File
 
 class PDFViewActivity : AppCompatActivity() {
 
@@ -29,12 +26,11 @@ class PDFViewActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        progressBar = ProgressBar(this).apply {
-            isIndeterminate = true
-        }
+        progressBar = ProgressBar(this).apply { isIndeterminate = true }
         setContentView(progressBar)
 
         val pdfUrl = intent.getStringExtra("pdfUrl") ?: return
+        val bookId = intent.getStringExtra("bookId") ?: "default_book"
 
         lifecycleScope.launch {
             try {
@@ -55,7 +51,15 @@ class PDFViewActivity : AppCompatActivity() {
 
                     viewPager = ViewPager2(this@PDFViewActivity).apply {
                         adapter = PdfPagerAdapter(bitmaps)
+                        currentItem = getLastReadPage(bookId)
+
+                        registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+                            override fun onPageSelected(position: Int) {
+                                saveLastReadPage(bookId, position)
+                            }
+                        })
                     }
+
                     setContentView(viewPager)
                 } ?: run {
                     showError("Failed to download PDF.")
@@ -86,6 +90,16 @@ class PDFViewActivity : AppCompatActivity() {
             e.printStackTrace()
             null
         }
+    }
+
+    private fun saveLastReadPage(bookId: String, page: Int) {
+        getSharedPreferences("reading_progress", MODE_PRIVATE).edit()
+            .putInt(bookId, page).apply()
+    }
+
+    private fun getLastReadPage(bookId: String): Int {
+        return getSharedPreferences("reading_progress", MODE_PRIVATE)
+            .getInt(bookId, 0)
     }
 
     override fun onDestroy() {
