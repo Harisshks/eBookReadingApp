@@ -17,7 +17,7 @@ class ZoomableImageView @JvmOverloads constructor(
     private var scaleFactor = 1f
 
     init {
-        scaleType = ScaleType.FIT_CENTER
+        scaleType = ScaleType.MATRIX
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {

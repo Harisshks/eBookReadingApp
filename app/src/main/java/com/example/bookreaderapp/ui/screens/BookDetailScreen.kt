@@ -1,18 +1,26 @@
 package com.example.bookreaderapp.ui.screens
 
 
+import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.example.bookreaderapp.PDFViewActivity
 import com.example.bookreaderapp.viewmodel.BooksViewModel
 
 
 @Composable
 fun BookDetailScreen(title: String, bookId: String, navController: NavController) {
+    val context = LocalContext.current
+    val sharedPrefs = context.getSharedPreferences("reading_progress", Context.MODE_PRIVATE)
+    val lastReadPage = sharedPrefs.getInt("last_page_$bookId", -1)
+
     val viewModel = BooksViewModel()
     val book by viewModel.getBookById(bookId).collectAsState(initial = null)
 
@@ -23,10 +31,28 @@ fun BookDetailScreen(title: String, bookId: String, navController: NavController
         book?.let {
             Text(text = "Author: ${it.author}")
             Spacer(modifier = Modifier.height(16.dp))
+
             Button(onClick = {
-                navController.navigate("pdf_view/${Uri.encode(it.pdfurl)}")
+                val intent = Intent(context, PDFViewActivity::class.java).apply {
+                    putExtra("pdfUrl", it.pdfurl)
+                    putExtra("bookId", it.id)
+                }
+                context.startActivity(intent)
             }) {
-                Text("Read Book")
+                Text("Read Now")
+            }
+
+            if (lastReadPage > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(onClick = {
+                    val intent = Intent(context, PDFViewActivity::class.java).apply {
+                        putExtra("pdfUrl", it.pdfurl)
+                        putExtra("bookId", it.id)
+                    }
+                    context.startActivity(intent)
+                }) {
+                    Text("Resume Reading (Page ${lastReadPage + 1})")
+                }
             }
         } ?: CircularProgressIndicator()
     }

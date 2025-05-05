@@ -1,9 +1,12 @@
 package com.example.bookreaderapp
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.view.ScaleGestureDetector
 import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -22,15 +25,27 @@ class PDFViewActivity : AppCompatActivity() {
     private lateinit var viewPager: ViewPager2
     private var pdfRenderer: PdfRenderer? = null
     private var currentFile: File? = null
+    private var scaleFactor = 1f // Initial scale factor
+    private lateinit var scaleDetector: ScaleGestureDetector
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        progressBar = ProgressBar(this).apply { isIndeterminate = true }
+        progressBar = ProgressBar(this).apply {
+            isIndeterminate = true
+        }
         setContentView(progressBar)
 
         val pdfUrl = intent.getStringExtra("pdfUrl") ?: return
-        val bookId = intent.getStringExtra("bookId") ?: "default_book"
+
+        // Set up the ScaleGestureDetector
+        scaleDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                scaleFactor *= detector.scaleFactor
+                scaleFactor = scaleFactor.coerceIn(0.1f, 5f) // Limit zoom scale
+                return true
+            }
+        })
 
         lifecycleScope.launch {
             try {
@@ -39,28 +54,47 @@ class PDFViewActivity : AppCompatActivity() {
                     val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
                     pdfRenderer = PdfRenderer(descriptor)
 
+                    val displayWidth = resources.displayMetrics.widthPixels
+                    val displayHeight = resources.displayMetrics.heightPixels
+
                     val bitmaps = withContext(Dispatchers.IO) {
                         (0 until pdfRenderer!!.pageCount).map { i ->
                             pdfRenderer!!.openPage(i).use { page ->
-                                val bmp = Bitmap.createBitmap(page.width, page.height, Bitmap.Config.ARGB_8888)
+                                val scaleFactor = minOf(displayWidth.toFloat() / page.width, displayHeight.toFloat() / page.height)
+                                val scaledWidth = (page.width * scaleFactor).toInt()
+                                val scaledHeight = (page.height * scaleFactor).toInt()
+
+                                val bmp = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
                                 page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                                 bmp
                             }
                         }
                     }
 
-                    viewPager = ViewPager2(this@PDFViewActivity).apply {
-                        adapter = PdfPagerAdapter(bitmaps)
-                        currentItem = getLastReadPage(bookId)
+                    val bookId = intent.getStringExtra("bookId") ?: return@launch
 
-                        registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
-                            override fun onPageSelected(position: Int) {
-                                saveLastReadPage(bookId, position)
-                            }
-                        })
+                    val adapter = PdfPagerAdapter(this@PDFViewActivity, bitmaps, bookId)
+
+                    viewPager = ViewPager2(this@PDFViewActivity).apply {
+                        this.adapter = adapter
+
+                        val prefs = getSharedPreferences("reading_progress", Context.MODE_PRIVATE)
+                        val lastPage = prefs.getInt("last_page_$bookId", 0)
+                        setCurrentItem(lastPage, false)
                     }
 
                     setContentView(viewPager)
+
+
+                    // Set a custom touch listener to handle zoom gestures
+                    viewPager.setOnTouchListener { _, event ->
+                        scaleDetector.onTouchEvent(event)
+                        val matrix = Matrix()
+                        matrix.setScale(scaleFactor, scaleFactor)
+                        viewPager.scaleX = scaleFactor
+                        viewPager.scaleY = scaleFactor
+                        true
+                    }
                 } ?: run {
                     showError("Failed to download PDF.")
                 }
@@ -90,16 +124,6 @@ class PDFViewActivity : AppCompatActivity() {
             e.printStackTrace()
             null
         }
-    }
-
-    private fun saveLastReadPage(bookId: String, page: Int) {
-        getSharedPreferences("reading_progress", MODE_PRIVATE).edit()
-            .putInt(bookId, page).apply()
-    }
-
-    private fun getLastReadPage(bookId: String): Int {
-        return getSharedPreferences("reading_progress", MODE_PRIVATE)
-            .getInt(bookId, 0)
     }
 
     override fun onDestroy() {
