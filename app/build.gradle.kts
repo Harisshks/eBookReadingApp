@@ -104,6 +104,7 @@ dependencies {
     implementation ("androidx.core:core-ktx:1.12.0")
     implementation ("com.google.accompanist:accompanist-pager:0.30.1")
     implementation ("com.google.accompanist:accompanist-pager-indicators:0.30.1")
+    implementation("androidx.compose.foundation:foundation:1.6.0")
 
 
 }
