@@ -2,133 +2,144 @@ package com.example.bookreaderapp
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Matrix
 import android.graphics.pdf.PdfRenderer
-import android.os.Bundle
 import android.os.ParcelFileDescriptor
-import android.view.ScaleGestureDetector
-import android.widget.ProgressBar
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
-import androidx.viewpager2.widget.ViewPager2
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
+import com.google.accompanist.pager.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 
-class PDFViewActivity : AppCompatActivity() {
+// Main Viewer Screen
+@OptIn(ExperimentalPagerApi::class)
+@Composable
+fun PdfViewerScreen(pdfUrl: String, bookId: String) {
+    val context = LocalContext.current
+    var bitmaps by remember { mutableStateOf<List<Bitmap>>(emptyList()) }
 
-    private lateinit var progressBar: ProgressBar
-    private lateinit var viewPager: ViewPager2
-    private var pdfRenderer: PdfRenderer? = null
-    private var currentFile: File? = null
-    private var scaleFactor = 1f // Initial scale factor
-    private lateinit var scaleDetector: ScaleGestureDetector
+    LaunchedEffect(pdfUrl) {
+        val file = downloadPdfFile(context, pdfUrl)
+        file?.let {
+            val descriptor = ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY)
+            val renderer = PdfRenderer(descriptor)
+            val displayWidth = context.resources.displayMetrics.widthPixels
+            val displayHeight = context.resources.displayMetrics.heightPixels
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        progressBar = ProgressBar(this).apply {
-            isIndeterminate = true
-        }
-        setContentView(progressBar)
-
-        val pdfUrl = intent.getStringExtra("pdfUrl") ?: return
-
-        // Set up the ScaleGestureDetector
-        scaleDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-            override fun onScale(detector: ScaleGestureDetector): Boolean {
-                scaleFactor *= detector.scaleFactor
-                scaleFactor = scaleFactor.coerceIn(0.1f, 5f) // Limit zoom scale
-                return true
-            }
-        })
-
-        lifecycleScope.launch {
-            try {
-                currentFile = withContext(Dispatchers.IO) { downloadPdfFile(pdfUrl) }
-                currentFile?.let { file ->
-                    val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-                    pdfRenderer = PdfRenderer(descriptor)
-
-                    val displayWidth = resources.displayMetrics.widthPixels
-                    val displayHeight = resources.displayMetrics.heightPixels
-
-                    val bitmaps = withContext(Dispatchers.IO) {
-                        (0 until pdfRenderer!!.pageCount).map { i ->
-                            pdfRenderer!!.openPage(i).use { page ->
-                                val scaleFactor = minOf(displayWidth.toFloat() / page.width, displayHeight.toFloat() / page.height)
-                                val scaledWidth = (page.width * scaleFactor).toInt()
-                                val scaledHeight = (page.height * scaleFactor).toInt()
-
-                                val bmp = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
-                                page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                                bmp
-                            }
-                        }
-                    }
-
-                    val bookId = intent.getStringExtra("bookId") ?: return@launch
-
-                    val adapter = PdfPagerAdapter(this@PDFViewActivity, bitmaps, bookId)
-
-                    viewPager = ViewPager2(this@PDFViewActivity).apply {
-                        this.adapter = adapter
-
-                        val prefs = getSharedPreferences("reading_progress", Context.MODE_PRIVATE)
-                        val lastPage = prefs.getInt("last_page_$bookId", 0)
-                        setCurrentItem(lastPage, false)
-                    }
-
-                    setContentView(viewPager)
-
-
-                    // Set a custom touch listener to handle zoom gestures
-                    viewPager.setOnTouchListener { _, event ->
-                        scaleDetector.onTouchEvent(event)
-                        val matrix = Matrix()
-                        matrix.setScale(scaleFactor, scaleFactor)
-                        viewPager.scaleX = scaleFactor
-                        viewPager.scaleY = scaleFactor
-                        true
-                    }
-                } ?: run {
-                    showError("Failed to download PDF.")
+            val pages = (0 until renderer.pageCount).map { i ->
+                renderer.openPage(i).use { page ->
+                    val scaleFactor = minOf(
+                        displayWidth.toFloat() / page.width,
+                        displayHeight.toFloat() / page.height
+                    )
+                    val scaledWidth = (page.width * scaleFactor).toInt()
+                    val scaledHeight = (page.height * scaleFactor).toInt()
+                    val bmp = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
+                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    bmp
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
-                showError("Error loading PDF: ${e.message}")
             }
+            bitmaps = pages
         }
     }
 
-    private fun showError(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
-        finish()
-    }
-
-    private fun downloadPdfFile(url: String): File? {
-        return try {
-            val client = OkHttpClient()
-            val request = Request.Builder().url(url).build()
-            val response = client.newCall(request).execute()
-            if (response.isSuccessful) {
-                val file = File(cacheDir, "temp_${System.currentTimeMillis()}.pdf")
-                file.outputStream().use { response.body?.byteStream()?.copyTo(it) }
-                file
-            } else null
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
+    if (bitmaps.isNotEmpty()) {
+        PdfPager(bitmaps = bitmaps, bookId = bookId)
+    } else {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.CircularProgressIndicator()
         }
     }
+}
 
-    override fun onDestroy() {
-        super.onDestroy()
-        pdfRenderer?.close()
-        currentFile?.delete()
+// Horizontal Pager with saved page
+@OptIn(ExperimentalPagerApi::class)
+@Composable
+fun PdfPager(bitmaps: List<Bitmap>, bookId: String) {
+    val context = LocalContext.current
+    val pagerState = rememberPagerState(
+        initialPage = getLastReadPage(context, bookId),
+        pageCount = { bitmaps.size }
+    )
+
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize()
+    ) { pageIndex ->
+        SaveLastReadPage(context, bookId, pageIndex)
+        ZoomableImage(bitmap = bitmaps[pageIndex])
+    }
+}
+
+// Zoomable PDF page
+@Composable
+fun ZoomableImage(bitmap: Bitmap) {
+    var scale by remember { mutableStateOf(1f) }
+    var offsetX by remember { mutableStateOf(0f) }
+    var offsetY by remember { mutableStateOf(0f) }
+
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    scale = (scale * zoom).coerceIn(1f, 5f)
+                    offsetX += pan.x
+                    offsetY += pan.y
+                }
+            }
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offsetX,
+                translationY = offsetY
+            )
+    )
+}
+
+// SharedPreferences: Save
+fun SaveLastReadPage(context: Context, bookId: String, pageIndex: Int) {
+    val prefs = context.getSharedPreferences("reading_progress", Context.MODE_PRIVATE)
+    prefs.edit().putInt("last_page_$bookId", pageIndex).apply()
+}
+
+// SharedPreferences: Get
+fun getLastReadPage(context: Context, bookId: String): Int {
+    val prefs = context.getSharedPreferences("reading_progress", Context.MODE_PRIVATE)
+    return prefs.getInt("last_page_$bookId", 0)
+}
+
+// PDF Downloader from URL
+suspend fun downloadPdfFile(context: Context, url: String): File? = withContext(Dispatchers.IO) {
+    try {
+        val client = OkHttpClient()
+        val request = Request.Builder().url(url).build()
+        val response = client.newCall(request).execute()
+        if (response.isSuccessful) {
+            val file = File(context.cacheDir, "temp_${System.currentTimeMillis()}.pdf")
+            file.outputStream().use { response.body?.byteStream()?.copyTo(it) }
+            file
+        } else null
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
     }
 }
