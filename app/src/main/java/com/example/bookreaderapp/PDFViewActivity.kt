@@ -17,6 +17,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -80,7 +81,7 @@ fun PdfViewerScreen(pdfUrl: String, bookId: String) {
 @Composable
 fun PdfPager(file: File, bookId: String) {
     val context = LocalContext.current
-    var pageCount by remember { mutableStateOf(0) }
+    var pageCount by remember { mutableIntStateOf(0) }
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(file) {
