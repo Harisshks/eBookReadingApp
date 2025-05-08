@@ -1,25 +1,18 @@
 package com.example.bookreaderapp.ui.screens
 
-
 import android.content.Context
 import android.net.Uri
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.bookreaderapp.viewmodel.BooksViewModel
-
 
 @Composable
 fun BookDetailScreen(title: String, bookId: String, navController: NavController) {
@@ -30,30 +23,70 @@ fun BookDetailScreen(title: String, bookId: String, navController: NavController
     val viewModel = BooksViewModel()
     val book by viewModel.getBookById(bookId).collectAsState(initial = null)
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = title, style = MaterialTheme.typography.headlineMedium)
-        Spacer(modifier = Modifier.height(8.dp))
+    book?.let { book ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                AsyncImage(
+                    model = book.coverUrl,
+                    contentDescription = "${book.title} Cover",
+                    modifier = Modifier
+                        .width(120.dp)
+                        .height(180.dp)
+                )
 
-        book?.let {
-            Text(text = "Author: ${it.author}")
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-            Button(onClick = {
-                navController.navigate("pdf_view/${Uri.encode(it.pdfurl)}/${it.id}")
-            }) {
-                Text("Read Now")
-            }
-
-            if (lastReadPage > 0) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = {
-                    navController.navigate("pdf_view/${Uri.encode(it.pdfurl)}/${it.id}")
-                }) {
-                    Text("Resume Reading (Page ${lastReadPage + 1})")
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .align(Alignment.Top)
+                ) {
+                    Text(
+                        text = book.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "By ${book.author}",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
                 }
             }
 
-        } ?: CircularProgressIndicator()
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = book.description,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.weight(1f)) // Push button to bottom
+
+            Button(
+                onClick = {
+                    navController.navigate("pdf_view/${Uri.encode(book.pdfurl)}/${book.id}")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = if (lastReadPage > 0) "Continue Reading (Page ${lastReadPage + 1})"
+                    else "Read Now"
+                )
+            }
+        }
+    } ?: Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
     }
 }
-
