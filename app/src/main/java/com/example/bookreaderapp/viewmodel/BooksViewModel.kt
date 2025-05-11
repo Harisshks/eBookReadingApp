@@ -3,6 +3,7 @@ package com.example.bookreaderapp.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.example.bookreaderapp.data.models.Book
+import com.example.bookreaderapp.data.repository.BooksRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ class BooksViewModel : ViewModel() {
 
     private val _books = MutableStateFlow<List<Book>>(emptyList())
     val books: StateFlow<List<Book>> = _books
+
 
     init {
         fetchBooks()
@@ -54,6 +56,7 @@ class BooksViewModel : ViewModel() {
             emit(null)
         }
     }
+
     fun getBooksByGenre(genre: String): Flow<List<Book>> {
         return books.map { list -> list.filter { it.genre.equals(genre, ignoreCase = true) } }
     }

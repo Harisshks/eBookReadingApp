@@ -3,6 +3,7 @@ package com.example.bookreaderapp.ui.screens
 import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -200,3 +201,4 @@ fun BookDetailContentPreview() {
         navController = rememberNavController()
     )
 }
+
