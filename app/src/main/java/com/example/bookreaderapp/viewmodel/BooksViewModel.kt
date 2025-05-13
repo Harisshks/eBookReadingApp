@@ -2,6 +2,7 @@ package com.example.bookreaderapp.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookreaderapp.data.models.Book
 import com.example.bookreaderapp.data.repository.BooksRepository
 import com.google.firebase.firestore.FirebaseFirestore
@@ -19,6 +20,7 @@ class BooksViewModel : ViewModel() {
 
     private val _books = MutableStateFlow<List<Book>>(emptyList())
     val books: StateFlow<List<Book>> = _books
+
 
 
     init {
