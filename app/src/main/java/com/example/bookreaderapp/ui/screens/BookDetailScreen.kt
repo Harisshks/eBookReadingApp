@@ -58,7 +58,7 @@ fun BookDetailContent(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     AsyncImage(
-                        model = book.coverURL,
+                        model = book.coverurl,
                         contentDescription = "${book.title} Cover",
                         modifier = Modifier
                             .size(140.dp)
@@ -201,7 +201,7 @@ fun BookDetailContent(
                 }
         ) {
             AsyncImage(
-                model = book.coverURL,
+                model = book.coverurl,
                 contentDescription = book.title,
                 modifier = Modifier
                     .height(180.dp)
@@ -227,7 +227,7 @@ fun BookDetailContentPreview() {
         pdfurl = "https://example.com/atomic.pdf",
         genre = "Self Help",
         description = "A practical guide to building good habits and breaking bad ones.",
-        coverURL = "https://raw.githubusercontent.com/Harisshks/Bookpdffiles/main/ahpic.jpg"
+        coverurl = "https://raw.githubusercontent.com/Harisshks/Bookpdffiles/main/ahpic.jpg"
     )
 
     BookDetailContent(

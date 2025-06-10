@@ -16,45 +16,65 @@ import com.example.bookreaderapp.viewmodel.BooksViewModel
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookreaderapp.data.models.Book
-
 
 
 @Composable
 fun HomeScreen(navController: NavController, booksViewModel: BooksViewModel) {
     val books by booksViewModel.books.collectAsState()
+    var searchQuery by remember { mutableStateOf("") }
 
-    // Group books by genre
-    val booksByGenre = books.groupBy { it.genre }
+    // Filter books by search query (title or author)
+    val filteredBooks = books.filter {
+        it.title.contains(searchQuery, ignoreCase = true) ||
+                it.author.contains(searchQuery, ignoreCase = true)
+    }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        booksByGenre.forEach { (genre, genreBooks) ->
-            item {
-                Text(
-                    text = genre,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            }
+    val booksByGenre = filteredBooks.groupBy { it.genre }
 
-            item {
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(genreBooks) { book ->
-                        BookCard(book = book, onClick = {
-                            navController.navigate("book_detail/${book.title}/${book.id}")
-                        })
+    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+
+        // 🔍 Search Bar
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            label = { Text("Search books...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        )
+
+        // 📚 Book list grouped by genre
+        LazyColumn(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            booksByGenre.forEach { (genre, genreBooks) ->
+                item {
+                    Text(
+                        text = genre,
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+
+                item {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(genreBooks) { book ->
+                            BookCard(book = book, onClick = {
+                                navController.navigate("book_detail/${book.title}/${book.id}")
+                            })
+                        }
                     }
                 }
             }
@@ -62,15 +82,14 @@ fun HomeScreen(navController: NavController, booksViewModel: BooksViewModel) {
     }
 }
 
-
-@Composable
-fun GenreChip(genre: String) {
-    AssistChip(
-        onClick = { /* Handle genre click */ },
-        modifier = Modifier.padding(4.dp),
-        label = { Text(genre) }
-    )
-}
+//@Composable
+//fun GenreChip(genre: String) {
+//    AssistChip(
+//        onClick = { /* Handle genre click */ },
+//        modifier = Modifier.padding(4.dp),
+//        label = { Text(genre) }
+//    )
+//}
 
 // BookCard.kt
 @Composable
