@@ -2,9 +2,7 @@ package com.example.bookreaderapp.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.bookreaderapp.data.models.Book
-import com.example.bookreaderapp.data.repository.BooksRepository
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,13 +12,29 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 
 
-class BooksViewModel : ViewModel() {
+open class BooksViewModel : ViewModel() {
 
     private val firestore = FirebaseFirestore.getInstance()
 
     private val _books = MutableStateFlow<List<Book>>(emptyList())
-    val books: StateFlow<List<Book>> = _books
+    open val books: StateFlow<List<Book>> = _books
 
+    private val _wishlist = MutableStateFlow<List<Book>>(emptyList())
+    val wishlist: StateFlow<List<Book>> = _wishlist
+
+    fun isInWishlist(book: Book): Boolean {
+        return _wishlist.value.any { it.id == book.id }
+    }
+
+    fun toggleWishlist(book: Book) {
+        val current = _wishlist.value.toMutableList()
+        if (current.any { it.id == book.id }) {
+            current.removeAll { it.id == book.id }
+        } else {
+            current.add(book)
+        }
+        _wishlist.value = current
+    }
 
 
     init {

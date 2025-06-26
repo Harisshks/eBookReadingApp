@@ -8,5 +8,6 @@ data class Book(
     val pdfurl: String="",
     val genre: String="",
     val description: String = "",
-    val coverurl:String = ""
+    val coverurl:String = "",
+    val pages : Int = 0
 )

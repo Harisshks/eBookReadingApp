@@ -3,27 +3,42 @@ package com.example.bookreaderapp.ui.screens
 
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import com.example.bookreaderapp.viewmodel.BooksViewModel
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.bookreaderapp.data.models.Book
+import com.example.bookreaderapp.viewmodel.BooksViewModel
 
 
 @Composable
@@ -31,7 +46,6 @@ fun HomeScreen(navController: NavController, booksViewModel: BooksViewModel) {
     val books by booksViewModel.books.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
 
-    // Filter books by search query (title or author)
     val filteredBooks = books.filter {
         it.title.contains(searchQuery, ignoreCase = true) ||
                 it.author.contains(searchQuery, ignoreCase = true)
@@ -39,23 +53,28 @@ fun HomeScreen(navController: NavController, booksViewModel: BooksViewModel) {
 
     val booksByGenre = filteredBooks.groupBy { it.genre }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(16.dp)) {
 
         // 🔍 Search Bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            label = { Text("Search books...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+            placeholder = { Text("Search books...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .padding(bottom = 16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            )
         )
 
         // 📚 Book list grouped by genre
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        LazyColumn(modifier = Modifier.fillMaxSize()) {
             booksByGenre.forEach { (genre, genreBooks) ->
                 item {
                     Text(
@@ -82,15 +101,6 @@ fun HomeScreen(navController: NavController, booksViewModel: BooksViewModel) {
     }
 }
 
-//@Composable
-//fun GenreChip(genre: String) {
-//    AssistChip(
-//        onClick = { /* Handle genre click */ },
-//        modifier = Modifier.padding(4.dp),
-//        label = { Text(genre) }
-//    )
-//}
-
 // BookCard.kt
 @Composable
 fun BookCard(book: Book, onClick: () -> Unit) {
@@ -105,31 +115,32 @@ fun BookCard(book: Book, onClick: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.MenuBook, // or use a real image
-                contentDescription = "Book Icon",
+            AsyncImage(
+                model = book.coverurl,
+                contentDescription = "Book Cover",
                 modifier = Modifier
-                    .size(48.dp)
-                    .align(Alignment.CenterHorizontally)
+                    .fillMaxWidth()
+                    .height(180.dp)
+                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
+                contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Column(modifier = Modifier.padding(8.dp)) {
+                Text(
+                    text = book.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-            Text(
-                text = book.title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = book.author,
-                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                Text(
+                    text = book.author,
+                    style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

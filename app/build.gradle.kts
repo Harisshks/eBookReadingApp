@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("com.google.gms.google-services") // ✅ Add this
+    id("com.google.gms.google-services")
 
 
 }
@@ -60,6 +60,10 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.firebase.auth)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     // Test dependencies
     testImplementation(libs.junit)
@@ -89,8 +93,7 @@ dependencies {
     // Another fork of the android-pdf-viewer library
 
     // AndroidX PDF Viewer (Alpha release)
-
-    implementation ("com.google.firebase:firebase-firestore-ktx:24.9.0") // or latest
+    implementation("com.google.firebase:firebase-firestore-ktx:24.11.1")
     implementation("com.squareup.okhttp3:okhttp:4.9.3")
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
@@ -106,6 +109,9 @@ dependencies {
     implementation ("com.google.accompanist:accompanist-pager-indicators:0.30.1")
     implementation("androidx.compose.foundation:foundation:1.6.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
+
+
+
 
 
 }
