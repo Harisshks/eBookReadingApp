@@ -85,6 +85,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-firestore") // For Firebase Firestore
     implementation("com.google.firebase:firebase-storage") // For Firebase Storage
+    implementation("com.google.firebase:firebase-auth-ktx")
 
     // Original android-pdf-viewer library
 

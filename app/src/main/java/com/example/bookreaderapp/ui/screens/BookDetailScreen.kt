@@ -85,6 +85,8 @@ fun BookDetailScreen(
     var menuExpanded by remember { mutableStateOf(false) }
     val isWishlisted = booksViewModel.wishlist.collectAsState().value.any { it.id == book.id }
     val coroutineScope = rememberCoroutineScope()
+    val otherGenreBooks = allBooks.filter { it.genre != book.genre && it.id != book.id }
+
 
 
 
@@ -112,7 +114,7 @@ fun BookDetailScreen(
                     Toast.makeText(context, "Adding to Wishlist...", Toast.LENGTH_SHORT).show()
                     booksViewModel.toggleWishlist(book)
                     coroutineScope.launch {
-                        delay(1000) // Wait 1.5 seconds
+                        delay(1000)
                         Toast.makeText(context, "Added to Wishlist", Toast.LENGTH_SHORT).show()
                     }
                 }) {
@@ -122,6 +124,7 @@ fun BookDetailScreen(
                         tint = if (isWishlisted) Color.Red else Color.White
                     )
                 }
+
 
                 Box {
                     IconButton(onClick = { menuExpanded = true }) {
@@ -151,7 +154,6 @@ fun BookDetailScreen(
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Black)
         )
 
-    // Header Section
         Row(modifier = Modifier.fillMaxWidth()) {
             AsyncImage(
                 model = book.coverurl,
@@ -265,32 +267,35 @@ fun BookDetailScreen(
         }
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Author's Other Books
         if (authorBooks.isNotEmpty()) {
             Text("More by ${book.author}", style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
             HorizontalBookList(books = authorBooks, navController = navController)
             Spacer(modifier = Modifier.height(16.dp))
         }
+        else{
+            if (otherGenreBooks.isNotEmpty()) {
+                Text("Books you might like", style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
+                HorizontalBookList(books = otherGenreBooks, navController = navController)
+            } else {
+                Text("No other recommendations available.", color = Color.Gray)
+            }
+        }
 
-        // Similar Genre Books
         if (similarBooks.isNotEmpty()) {
             Text("Similar eBooks", style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
             HorizontalBookList(books = similarBooks, navController = navController)
             Spacer(modifier = Modifier.height(16.dp))
         }
 
-        // Details
         Text("eBook Details", style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
         Spacer(modifier = Modifier.height(8.dp))
 
-       // BookDetailRow("Language", book.language ?: "Unknown")
-       // BookDetailRow("Features", book.features ?: "Digital book")
+        BookDetailRow("Title", book.title)
         BookDetailRow("Author", book.author)
-        //BookDetailRow("Publisher", book.publisher ?: "Unknown")
-       // BookDetailRow("Published on", book.releaseDate ?: "Unknown")
-       // BookDetailRow("Pages", book.pageCount?.toString() ?: "N/A")
         BookDetailRow("Genres", book.genre)
-        //BookDetailRow("DRM", if (book.isDRMFree) "This content is DRM free." else "DRM protected")
+        BookDetailRow("Pages", book.pages?.toString() ?: "N/A")
+        BookDetailRow("Language", "English")
+
     }
 }
 

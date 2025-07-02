@@ -12,7 +12,12 @@ import androidx.compose.material.Icon
 import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,57 +30,87 @@ import com.example.bookreaderapp.PdfViewerScreen
 import com.example.bookreaderapp.ui.screens.BookDetailScreen
 import com.example.bookreaderapp.ui.screens.HomeScreen
 import com.example.bookreaderapp.ui.screens.LibraryScreen
+import com.example.bookreaderapp.ui.screens.LoginScreen
 import com.example.bookreaderapp.ui.screens.SettingsScreen
+import com.example.bookreaderapp.ui.screens.SignupScreen
 import com.example.bookreaderapp.ui.screens.WishlistScreen
+import com.example.bookreaderapp.viewmodel.AuthViewModel
 import com.example.bookreaderapp.viewmodel.BooksViewModel
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val booksViewModel: BooksViewModel = viewModel()
+    val authViewModel: AuthViewModel = viewModel()
 
-    val bottomNavItems = listOf(
-        BottomNavItem.Home,
-        BottomNavItem.Library,
-        BottomNavItem.Wishlist,
-        BottomNavItem.Settings
-    )
+    val user by authViewModel.currentUser.collectAsState()
+
+    var startDestination by remember { mutableStateOf<String?>(null) }
+
+    // Set start destination based on authentication state
+    LaunchedEffect(user) {
+        startDestination = if (user == null) "login" else BottomNavItem.Home.route
+    }
+
+    if (startDestination == null) {
+        // Show loading screen while determining start destination
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
 
     Scaffold(
         bottomBar = {
-            BottomNavigation(
-                backgroundColor = Color.Black,
-                contentColor = Color.White,
-                elevation = 8.dp
-            ) {
-                val currentDestination = navController.currentBackStackEntryAsState().value?.destination
-                bottomNavItems.forEach { item ->
-                    BottomNavigationItem(
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) },
-                        selected = currentDestination?.route == item.route,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        selectedContentColor = Color(0xFFFF9800),
-                        unselectedContentColor = Color.Gray
+            if (user != null) {
+                BottomNavigation(
+                    backgroundColor = Color.Black,
+                    contentColor = Color.White,
+                    elevation = 8.dp
+                ) {
+                    val currentDestination = navController.currentBackStackEntryAsState().value?.destination
+                    val bottomNavItems = listOf(
+                        BottomNavItem.Home,
+                        BottomNavItem.Library,
+                        BottomNavItem.Wishlist,
+                        BottomNavItem.Settings
                     )
+
+                    bottomNavItems.forEach { item ->
+                        BottomNavigationItem(
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) },
+                            selected = currentDestination?.route == item.route,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            selectedContentColor = Color(0xFFFF9800),
+                            unselectedContentColor = Color.Gray
+                        )
+                    }
                 }
             }
         }
     ) { innerPadding ->
-
         NavHost(
             navController = navController,
-            startDestination = BottomNavItem.Home.route,
+            startDestination = startDestination!!,
             modifier = Modifier.padding(innerPadding)
         ) {
+            // Login
+            composable("login") {
+                LoginScreen(navController = navController, authViewModel = authViewModel)
+            }
+
+            // Signup
+            composable("signup") {
+                SignupScreen(navController = navController, authViewModel = authViewModel)
+            }
+
             // Home
             composable(BottomNavItem.Home.route) {
                 HomeScreen(navController = navController, booksViewModel = booksViewModel)
@@ -86,12 +121,9 @@ fun AppNavigation() {
                 LibraryScreen()
             }
 
-            // Wishlist — with access to ViewModel + navController
+            // Wishlist
             composable(BottomNavItem.Wishlist.route) {
-                WishlistScreen(
-                    booksViewModel = booksViewModel,
-                    navController = navController
-                )
+                WishlistScreen(booksViewModel = booksViewModel, navController = navController)
             }
 
             // Settings
@@ -109,13 +141,12 @@ fun AppNavigation() {
             ) { backStackEntry ->
                 val title = backStackEntry.arguments?.getString("title") ?: ""
                 val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
-
                 val allBooksState = booksViewModel.books.collectAsState()
                 val allBooks = allBooksState.value
                 val selectedBook = allBooks.find { it.id == bookId }
 
                 selectedBook?.let { book ->
-                    val lastReadPage = 0 // Replace with actual last-read page logic
+                    val lastReadPage = 0 // Replace with real value
                     BookDetailScreen(
                         book = book,
                         lastReadPage = lastReadPage,
