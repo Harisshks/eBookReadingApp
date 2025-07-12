@@ -1,27 +1,27 @@
 package com.example.bookreaderapp.ui.screens
 
-
-
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,120 +29,188 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import coil.compose.AsyncImage
 import com.example.bookreaderapp.data.models.Book
+import com.example.bookreaderapp.ui.components.BookCard
+import com.example.bookreaderapp.ui.components.SearchAndProfileBar
 import com.example.bookreaderapp.viewmodel.BooksViewModel
+import com.example.bookreaderapp.viewmodel.ProfileViewModel
 
-
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun HomeScreen(navController: NavController, booksViewModel: BooksViewModel) {
+fun HomeScreen(
+    navController: NavController,
+    booksViewModel: BooksViewModel,
+    profileViewModel: ProfileViewModel
+) {
     val books by booksViewModel.books.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var selectedGenre by remember { mutableStateOf<String?>(null) }
+
+    var showLibraryDialog by remember { mutableStateOf(false) }
+    var selectedBookForLibrary by remember { mutableStateOf<Book?>(null) }
+    val libraryBooks by booksViewModel.library.collectAsState()
+    val currentCategory = libraryBooks.find { it.id == selectedBookForLibrary?.id }?.category
+
 
     val filteredBooks = books.filter {
         it.title.contains(searchQuery, ignoreCase = true) ||
                 it.author.contains(searchQuery, ignoreCase = true)
     }
 
+    val genreFilteredBooks = selectedGenre?.let {
+        filteredBooks.filter { it.genre == selectedGenre }
+    } ?: filteredBooks
+
     val booksByGenre = filteredBooks.groupBy { it.genre }
 
-    Column(modifier = Modifier
-        .fillMaxSize()
-        .padding(16.dp)) {
-
-        // 🔍 Search Bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { searchQuery = it },
-            placeholder = { Text("Search books...") },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .padding(bottom = 16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(16.dp)
+    ) {
+        //  Search + Profile Row
+        SearchAndProfileBar(
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
+            onProfileClick = {
+                navController.navigate("profile")
+            },
+            profileViewModel = profileViewModel
         )
 
-        // 📚 Book list grouped by genre
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            booksByGenre.forEach { (genre, genreBooks) ->
-                item {
-                    Text(
-                        text = genre,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(vertical = 8.dp)
+        //  Genre Chips
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            val allGenres = books.map { it.genre }.distinct()
+            items(allGenres) { genre ->
+                val isSelected = selectedGenre == genre
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isSelected) Color(0xFF2196F3) else Color.DarkGray,
+                            RoundedCornerShape(16.dp)
+                        )
+                        .clickable {
+                            selectedGenre = if (isSelected) null else genre
+                        }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(text = genre, color = Color.White)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (selectedGenre != null) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                items(genreFilteredBooks) { book ->
+                    BookCard(
+                        book = book,
+                        onClick = {
+                            navController.navigate("book_detail/${book.title}/${book.id}")
+                        },
+                        onLongClick = {
+                            selectedBookForLibrary = book
+                            showLibraryDialog = true
+                        }
                     )
                 }
-
-                item {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        items(genreBooks) { book ->
-                            BookCard(book = book, onClick = {
-                                navController.navigate("book_detail/${book.title}/${book.id}")
-                            })
+            }
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                booksByGenre.forEach { (genre, genreBooks) ->
+                    item {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = genre,
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                            Text(
+                                text = "See All",
+                                color = Color(0xFF2196F3),
+                                modifier = Modifier.clickable {
+                                    navController.navigate("genre_books/$genre")
+                                }
+                            )
                         }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
+                    item {
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(genreBooks) { book ->
+                                BookCard(
+                                    book = book,
+                                    onClick = {
+                                        navController.navigate("book_detail/${book.title}/${book.id}")
+                                    },
+                                    onLongClick = {
+                                        selectedBookForLibrary = book
+                                        showLibraryDialog = true
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 16.dp),
+                            thickness = 1.dp,
+                            color = Color.DarkGray
+                        )
                     }
                 }
             }
         }
     }
-}
 
-// BookCard.kt
-@Composable
-fun BookCard(book: Book, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .padding(8.dp)
-            .width(140.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(6.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-        ) {
-            AsyncImage(
-                model = book.coverurl,
-                contentDescription = "Book Cover",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-                    .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)),
-                contentScale = ContentScale.Crop
-            )
+    // 📚 Library Dialog
+    if (showLibraryDialog && selectedBookForLibrary != null) {
+        AddToLibraryDialog(
+            currentCategory = currentCategory,
+            onSelectCategory = { category ->
+                booksViewModel.addToLibrary(selectedBookForLibrary!!, category)
+                showLibraryDialog = false
+            },
+            onDismiss = { showLibraryDialog = false }
+        )
 
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text(
-                    text = book.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = book.author,
-                    style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
     }
+    if (showLibraryDialog && selectedBookForLibrary != null) {
+        AddToLibraryDialog(
+            currentCategory = currentCategory,
+            onSelectCategory = { category ->
+                booksViewModel.toggleLibrary(selectedBookForLibrary!!, category)
+                showLibraryDialog = false
+            },
+            onDismiss = {
+                showLibraryDialog = false
+            }
+        )
+    }
+
 }
-
-

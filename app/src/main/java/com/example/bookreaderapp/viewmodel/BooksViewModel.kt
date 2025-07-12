@@ -2,35 +2,37 @@ package com.example.bookreaderapp.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.bookreaderapp.data.models.Book
+import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.tasks.await
 
 
-class BooksViewModel : ViewModel() {
+open class BooksViewModel : ViewModel() {
 
     private val firestore = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
 
     private val _books = MutableStateFlow<List<Book>>(emptyList())
-    val books: StateFlow<List<Book>> = _books
+    open val books: StateFlow<List<Book>> = _books
 
     private val _wishlist = MutableStateFlow<List<Book>>(emptyList())
     val wishlist: StateFlow<List<Book>> = _wishlist
 
+    val _library = MutableStateFlow<List<Book>>(emptyList())
+    val library: StateFlow<List<Book>> = _library
+
+
     init {
         fetchBooks()
         fetchWishlist()
+        fetchLibrary()
     }
 
-    // ✅ Firestore Wishlist Listener
+    //Firestore Wishlist Listener
     private fun fetchWishlist() {
         val userId = auth.currentUser?.uid ?: return
 
@@ -99,23 +101,98 @@ class BooksViewModel : ViewModel() {
     }
 
 
-    // 🔍 5. Get book by ID
-    fun getBookById(bookId: String): Flow<Book?> = flow {
-        try {
-            val doc = firestore.collection("books").document(bookId).get().await()
-            if (doc.exists()) {
-                val book = doc.toObject(Book::class.java)?.copy(id = doc.id)
-                emit(book)
-            } else {
-                emit(null)
+    fun addToLibrary(book: Book, category: String) {
+        val currentUser = FirebaseAuth.getInstance().currentUser ?: return
+        val db = FirebaseFirestore.getInstance()
+
+        val bookData = hashMapOf(
+            "id" to book.id,
+            "title" to book.title,
+            "author" to book.author,
+            "coverurl" to book.coverurl,
+            "genre" to book.genre,
+            "category" to category
+        )
+
+        db.collection("users")
+            .document(currentUser.uid)
+            .collection("library")
+            .document(book.id)
+            .set(bookData)
+            .addOnSuccessListener {
+                Log.d("Library", "Book added to library with category $category")
             }
-        } catch (e: Exception) {
-            Log.e("BooksViewModel", "Failed to get book by ID", e)
-            emit(null)
+            .addOnFailureListener {
+                Log.e("Library", "Failed to add book: ${it.message}")
+            }
+    }
+
+    fun toggleLibrary(book: Book, category: String) {
+        val currentUser = Firebase.auth.currentUser
+        if (currentUser != null) {
+            val docRef = firestore.collection("users")
+                .document(currentUser.uid)
+                .collection("library")
+                .document(book.id)
+
+            docRef.get().addOnSuccessListener { document ->
+                if (document.exists()) {
+                    // Remove from library
+                    docRef.delete()
+                        .addOnSuccessListener {
+                            Log.d("Library", "Book removed from library")
+                        }
+                        .addOnFailureListener {
+                            Log.e("Library", "Failed to remove book: ${it.message}")
+                        }
+                } else {
+                    // Add to library
+                    val bookMap = book.toMap().toMutableMap()
+                    bookMap["category"] = category
+                    docRef.set(bookMap)
+                        .addOnSuccessListener {
+                            Log.d("Library", "Book added to library")
+                        }
+                        .addOnFailureListener {
+                            Log.e("Library", "Failed to add book: ${it.message}")
+                        }
+                }
+            }
         }
     }
 
-    fun getBooksByGenre(genre: String): Flow<List<Book>> {
-        return books.map { list -> list.filter { it.genre.equals(genre, ignoreCase = true) } }
+    fun removeFromLibrary(bookId: String) {
+        val currentUser = Firebase.auth.currentUser
+        if (currentUser != null) {
+            firestore.collection("users")
+                .document(currentUser.uid)
+                .collection("library")
+                .document(bookId)
+                .delete()
+                .addOnSuccessListener {
+                    Log.d("Library", "Book removed from library")
+                }
+                .addOnFailureListener {
+                    Log.e("Library", "Failed to remove book: ${it.message}")
+                }
+        }
     }
+
+
+
+    fun fetchLibrary() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        FirebaseFirestore.getInstance()
+            .collection("users")
+            .document(uid)
+            .collection("library")
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null) {
+                    val books = snapshot.documents.mapNotNull { it.toObject(Book::class.java) }
+                    _library.value = books
+                }
+            }
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.example.bookreaderapp.ui.screens
 
+import android.R.attr.category
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -22,20 +23,25 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -86,7 +92,11 @@ fun BookDetailScreen(
     val isWishlisted = booksViewModel.wishlist.collectAsState().value.any { it.id == book.id }
     val coroutineScope = rememberCoroutineScope()
     val otherGenreBooks = allBooks.filter { it.genre != book.genre && it.id != book.id }
-
+    var showLibraryDialog by remember { mutableStateOf(false) }
+    var selectedBookForLibrary by remember { mutableStateOf<Book?>(null) }
+    val isInLibrary = booksViewModel.library.collectAsState().value.any { it.id == book.id }
+    val libraryBooks by booksViewModel.library.collectAsState()
+    val currentCategory = libraryBooks.find { it.id == selectedBookForLibrary?.id }?.category
 
 
 
@@ -102,7 +112,7 @@ fun BookDetailScreen(
             title = {},
             navigationIcon = {
                 IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
             },
             actions = {
@@ -124,6 +134,18 @@ fun BookDetailScreen(
                         tint = if (isWishlisted) Color.Red else Color.White
                     )
                 }
+
+                IconButton(onClick = {
+                    selectedBookForLibrary = book
+                    showLibraryDialog = true
+                }) {
+                    Icon(
+                        imageVector = Icons.Default.Book, // You can use a better icon if needed
+                        contentDescription = "Add to Library",
+                        tint = if (isInLibrary) Color(0xFF2196F3) else Color.Gray
+                    )
+                }
+
 
 
                 Box {
@@ -211,11 +233,11 @@ fun BookDetailScreen(
 
                     Spacer(modifier = Modifier.width(30.dp))
 
-                    Divider(
-                        color = Color.Gray,
+                    HorizontalDivider(
                         modifier = Modifier
                             .height(24.dp)
-                            .width(1.dp)
+                            .width(1.dp),
+                        thickness = DividerDefaults.Thickness, color = Color.Gray
                     )
 
                     Spacer(modifier = Modifier.width(30.dp))
@@ -234,7 +256,11 @@ fun BookDetailScreen(
         }
         // Below your Read Now button
         Spacer(modifier = Modifier.height(16.dp))
-        Divider(color = Color.DarkGray, modifier = Modifier.padding(vertical = 16.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 16.dp),
+            thickness = DividerDefaults.Thickness,
+            color = Color.DarkGray
+        )
 
         // About this book
         var isExpanded by remember { mutableStateOf(false) }
@@ -293,10 +319,34 @@ fun BookDetailScreen(
         BookDetailRow("Title", book.title)
         BookDetailRow("Author", book.author)
         BookDetailRow("Genres", book.genre)
-        BookDetailRow("Pages", book.pages?.toString() ?: "N/A")
+        BookDetailRow("Pages", book.pages.toString())
         BookDetailRow("Language", "English")
 
     }
+    if (showLibraryDialog && selectedBookForLibrary != null) {
+        AddToLibraryDialog(
+            currentCategory = currentCategory,
+            onSelectCategory = { category ->
+                booksViewModel.addToLibrary(selectedBookForLibrary!!, category)
+                showLibraryDialog = false
+            },
+            onDismiss = { showLibraryDialog = false }
+        )
+    }
+    if (showLibraryDialog && selectedBookForLibrary != null) {
+        AddToLibraryDialog(
+            currentCategory = currentCategory,
+            onSelectCategory = { category ->
+                booksViewModel.toggleLibrary(selectedBookForLibrary!!, category)
+                showLibraryDialog = false
+            },
+            onDismiss = {
+                showLibraryDialog = false
+            }
+        )
+    }
+
+
 }
 
 @Composable
@@ -339,29 +389,3 @@ fun BookDetailRow(label: String, value: String) {
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-fun BookDetailScreenPreview() {
-    val dummyBook = Book(
-        id = "1",
-        title = "Atomic Habits",
-        author = "James Clear",
-        pdfurl = "https://example.com/atomic.pdf",
-        genre = "Self Help",
-        description = "A practical guide to building good habits and breaking bad ones.",
-        coverurl = "https://raw.githubusercontent.com/Harisshks/Bookpdffiles/main/ahpic.jpg"
-    )
-
-    val relatedBooks = listOf(
-        dummyBook.copy(id = "2", title = "The Power of Habit"),
-        dummyBook.copy(id = "3", title = "Deep Work"),
-        dummyBook.copy(id = "4", title = "Make Time")
-    )
-
-    BookDetailScreen(
-        book = dummyBook,
-        lastReadPage = 0,
-        navController = rememberNavController(),
-        allBooks = relatedBooks
-    )
-}

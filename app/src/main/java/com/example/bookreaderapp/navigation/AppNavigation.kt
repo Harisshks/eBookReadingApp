@@ -28,21 +28,25 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.navArgument
 import com.example.bookreaderapp.PdfViewerScreen
 import com.example.bookreaderapp.ui.screens.BookDetailScreen
+import com.example.bookreaderapp.ui.screens.EditProfileScreen
+import com.example.bookreaderapp.ui.screens.GenreBooksScreen
 import com.example.bookreaderapp.ui.screens.HomeScreen
 import com.example.bookreaderapp.ui.screens.LibraryScreen
 import com.example.bookreaderapp.ui.screens.LoginScreen
+import com.example.bookreaderapp.ui.screens.ProfileScreen
 import com.example.bookreaderapp.ui.screens.SettingsScreen
 import com.example.bookreaderapp.ui.screens.SignupScreen
 import com.example.bookreaderapp.ui.screens.WishlistScreen
 import com.example.bookreaderapp.viewmodel.AuthViewModel
 import com.example.bookreaderapp.viewmodel.BooksViewModel
+import com.example.bookreaderapp.viewmodel.ProfileViewModel
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
     val booksViewModel: BooksViewModel = viewModel()
     val authViewModel: AuthViewModel = viewModel()
-
+    val profileViewModel : ProfileViewModel = viewModel()
     val user by authViewModel.currentUser.collectAsState()
 
     var startDestination by remember { mutableStateOf<String?>(null) }
@@ -108,22 +112,51 @@ fun AppNavigation() {
 
             // Signup
             composable("signup") {
-                SignupScreen(navController = navController, authViewModel = authViewModel)
+                val profileViewModel: ProfileViewModel = viewModel()
+                SignupScreen(
+                    navController = navController,
+                    authViewModel = authViewModel,
+                    profileViewModel = profileViewModel
+                )
             }
+
 
             // Home
             composable(BottomNavItem.Home.route) {
-                HomeScreen(navController = navController, booksViewModel = booksViewModel)
+                HomeScreen(navController = navController, booksViewModel = booksViewModel, profileViewModel = profileViewModel)
+            }
+            composable("profile") {
+                ProfileScreen(
+                    profileViewModel = viewModel(),
+                    onEditProfile = { navController.navigate("edit_profile") },
+                    onLogout = {
+                        profileViewModel.logout()
+                        navController.navigate("login") {
+                            popUpTo("home") { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable("edit_profile") {
+                EditProfileScreen(
+                    profileViewModel = viewModel(),
+                    navController = navController
+                )
+            }
+            composable("genre_books/{genre}") {
+                val genre = it.arguments?.getString("genre") ?: ""
+                GenreBooksScreen(navController, genre, booksViewModel , profileViewModel)
             }
 
             // Library
             composable(BottomNavItem.Library.route) {
-                LibraryScreen()
+                LibraryScreen(booksViewModel,navController,profileViewModel)
             }
 
             // Wishlist
             composable(BottomNavItem.Wishlist.route) {
-                WishlistScreen(booksViewModel = booksViewModel, navController = navController)
+                WishlistScreen(booksViewModel = booksViewModel, navController = navController,profileViewModel)
             }
 
             // Settings

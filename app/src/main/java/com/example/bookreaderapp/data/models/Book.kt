@@ -9,5 +9,18 @@ data class Book(
     val genre: String="",
     val description: String = "",
     val coverurl:String = "",
-    val pages : Int = 0
-)
+    val pages : Int = 0,
+    val category: String? = null,
+    val inLibrary: Boolean = false
+){
+    fun toMap(): Map<String, Any> {
+        return mapOf(
+            "id" to id,
+            "title" to title,
+            "author" to author,
+            "genre" to genre,
+            "coverurl" to coverurl,
+            "category" to category
+        ) as Map<String, Any>
+    }
+}
