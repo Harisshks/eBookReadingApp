@@ -48,72 +48,57 @@ android {
 }
 
 dependencies {
-
     // Core Android dependencies
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
+    implementation("androidx.activity:activity-compose:1.7.2")
 
-    // Jetpack Compose
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.ui)
-    implementation(libs.androidx.ui.graphics)
-    implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.androidx.material3)
-    implementation(libs.firebase.auth)
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
-    implementation(libs.googleid)
+    // Compose BOM
+    implementation(platform("androidx.compose:compose-bom:2024.05.00"))
 
-    // Test dependencies
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
-
-    // Navigation and Material Icons
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    // Core Compose Libraries
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-graphics")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")
-
-    // PDF Viewer
-
-    // Firebase dependencies
-    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-firestore") // For Firebase Firestore
-    implementation("com.google.firebase:firebase-storage") // For Firebase Storage
-    implementation("com.google.firebase:firebase-auth-ktx")
-
-    // Original android-pdf-viewer library
-
-    // Fork of the android-pdf-viewer library
-
-    // Another fork of the android-pdf-viewer library
-
-    // AndroidX PDF Viewer (Alpha release)
-    implementation("com.google.firebase:firebase-firestore-ktx:24.11.1")
-    implementation("com.squareup.okhttp3:okhttp:4.9.3")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.viewpager2:viewpager2:1.0.0")
-
-    implementation("io.github.chrisbanes:PhotoView:2.3.0")
-
-    implementation ("androidx.compose.ui:ui:1.5.0")
-    implementation ("androidx.lifecycle:lifecycle-runtime-ktx:2.6.1")
-    implementation ("androidx.activity:activity-compose:1.7.2")
-    implementation ("com.squareup.okhttp3:okhttp:4.10.0")
-    implementation ("androidx.core:core-ktx:1.12.0")
-    implementation ("com.google.accompanist:accompanist-pager:0.30.1")
-    implementation ("com.google.accompanist:accompanist-pager-indicators:0.30.1")
     implementation("androidx.compose.foundation:foundation:1.6.0")
+
+    // Image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // Navigation
+    implementation("androidx.navigation:navigation-compose:2.9.2")
+    implementation("com.google.accompanist:accompanist-navigation-animation:0.34.0")
 
+    // Pager
+    implementation("com.google.accompanist:accompanist-pager:0.30.1")
+    implementation("com.google.accompanist:accompanist-pager-indicators:0.30.1")
 
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-firestore-ktx:24.11.1")
+    implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-auth-ktx")
 
+    // Google Sign-In and Credential
+    implementation("androidx.credentials:credentials:1.2.0-alpha03")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.0-alpha03")
+    implementation("com.google.android.gms:play-services-auth:20.7.0") // for google sign in
 
+    // PDF Viewing Support
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.viewpager2:viewpager2:1.0.0")
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")
+    implementation("io.github.chrisbanes:PhotoView:2.3.0")
+
+    // Test dependencies
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
+    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-tooling")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
-
