@@ -1,9 +1,13 @@
 package com.example.bookreaderapp.ui.screens
 
-import android.R.attr.category
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,17 +28,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.LibraryBooks
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DividerDefaults
@@ -59,20 +59,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.bookreaderapp.data.models.Book
 import com.example.bookreaderapp.viewmodel.BooksViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,7 +82,6 @@ fun BookDetailScreen(
     navController: NavController,
     allBooks: List<Book>,
     booksViewModel: BooksViewModel = viewModel()
-
 ) {
     val scrollState = rememberScrollState()
     val similarBooks = allBooks.filter { it.genre == book.genre && it.id != book.id }
@@ -96,10 +95,7 @@ fun BookDetailScreen(
     var selectedBookForLibrary by remember { mutableStateOf<Book?>(null) }
     val isInLibrary = booksViewModel.library.collectAsState().value.any { it.id == book.id }
     val libraryBooks by booksViewModel.library.collectAsState()
-    val currentCategory = libraryBooks.find { it.id == selectedBookForLibrary?.id }?.category
-
-
-
+    var currentCategory = libraryBooks.find { it.id == selectedBookForLibrary?.id }?.category
 
     Column(
         modifier = Modifier
@@ -116,16 +112,25 @@ fun BookDetailScreen(
                 }
             },
             actions = {
-                IconButton(onClick = { navController.navigate("search") }) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = Color.White)
-                }
+
 
                 IconButton(onClick = {
-                    Toast.makeText(context, "Adding to Wishlist...", Toast.LENGTH_SHORT).show()
+                    val isCurrentlyWishlisted = isWishlisted
+                    Toast.makeText(
+                        context,
+                        if (isCurrentlyWishlisted) "Removing from Wishlist..." else "Adding to Wishlist...",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     booksViewModel.toggleWishlist(book)
                     coroutineScope.launch {
                         delay(1000)
-                        Toast.makeText(context, "Added to Wishlist", Toast.LENGTH_SHORT).show()
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                if (isCurrentlyWishlisted) "Removed from Wishlist" else "Added to Wishlist",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }) {
                     Icon(
@@ -140,19 +145,16 @@ fun BookDetailScreen(
                     showLibraryDialog = true
                 }) {
                     Icon(
-                        imageVector = Icons.Default.Book, // You can use a better icon if needed
+                        imageVector = Icons.Default.Book,
                         contentDescription = "Add to Library",
                         tint = if (isInLibrary) Color(0xFF2196F3) else Color.Gray
                     )
                 }
 
-
-
                 Box {
                     IconButton(onClick = { menuExpanded = true }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "More", tint = Color.White)
                     }
-
                     DropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false }
@@ -189,17 +191,11 @@ fun BookDetailScreen(
 
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-
                 Text(book.title, style = MaterialTheme.typography.titleLarge.copy(color = Color.White))
                 Text("By ${book.author}", color = Color.Gray)
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 Spacer(modifier = Modifier.height(4.dp))
-
                 Spacer(modifier = Modifier.height(12.dp))
-
-                // Read Now Button
                 Button(
                     onClick = {
                         navController.navigate("pdf_view/${Uri.encode(book.pdfurl)}/${book.id}")
@@ -215,8 +211,6 @@ fun BookDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
-
-                // eBook + Pages Info
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -230,18 +224,14 @@ fun BookDetailScreen(
                         )
                         Text("eBook", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                     }
-
                     Spacer(modifier = Modifier.width(30.dp))
-
                     HorizontalDivider(
                         modifier = Modifier
                             .height(24.dp)
                             .width(1.dp),
                         thickness = DividerDefaults.Thickness, color = Color.Gray
                     )
-
                     Spacer(modifier = Modifier.width(30.dp))
-
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = book.pages.toString(),
@@ -252,9 +242,8 @@ fun BookDetailScreen(
                     }
                 }
             }
-
         }
-        // Below your Read Now button
+
         Spacer(modifier = Modifier.height(16.dp))
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 16.dp),
@@ -262,43 +251,17 @@ fun BookDetailScreen(
             color = Color.DarkGray
         )
 
-        // About this book
-        var isExpanded by remember { mutableStateOf(false) }
-
         Text("About this eBook", style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            book.description,
-            color = Color.LightGray,
-            maxLines = if (isExpanded) Int.MAX_VALUE else 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.clickable { isExpanded = !isExpanded }
-        ) {
-            IconButton(onClick = { isExpanded = !isExpanded }) {
-                Icon(
-                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = Color.White
-                )
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-
-            Text(
-                text = if(isExpanded) "Read less" else "Read more",
-                color = Color(0xFF90CAF9)
-            )
-        }
+        ExpandableDescriptionSection(description = book.description)
+        Spacer(modifier = Modifier.width(4.dp))
         Spacer(modifier = Modifier.height(16.dp))
 
         if (authorBooks.isNotEmpty()) {
             Text("More by ${book.author}", style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
             HorizontalBookList(books = authorBooks, navController = navController)
             Spacer(modifier = Modifier.height(16.dp))
-        }
-        else{
+        } else {
             if (otherGenreBooks.isNotEmpty()) {
                 Text("Books you might like", style = MaterialTheme.typography.titleMedium.copy(color = Color.White))
                 HorizontalBookList(books = otherGenreBooks, navController = navController)
@@ -321,23 +284,20 @@ fun BookDetailScreen(
         BookDetailRow("Genres", book.genre)
         BookDetailRow("Pages", book.pages.toString())
         BookDetailRow("Language", "English")
-
     }
+
     if (showLibraryDialog && selectedBookForLibrary != null) {
         AddToLibraryDialog(
             currentCategory = currentCategory,
-            onSelectCategory = { category ->
-                booksViewModel.addToLibrary(selectedBookForLibrary!!, category)
+            onCategoryChange = { category ->
+                val book = selectedBookForLibrary!!
+                booksViewModel.toggleLibrary(book, category)
+                currentCategory = category
                 showLibraryDialog = false
             },
-            onDismiss = { showLibraryDialog = false }
-        )
-    }
-    if (showLibraryDialog && selectedBookForLibrary != null) {
-        AddToLibraryDialog(
-            currentCategory = currentCategory,
-            onSelectCategory = { category ->
-                booksViewModel.toggleLibrary(selectedBookForLibrary!!, category)
+            onRemove = {
+                val book = selectedBookForLibrary!!
+                booksViewModel.removeFromLibrary(book.id)
                 showLibraryDialog = false
             },
             onDismiss = {
@@ -349,6 +309,7 @@ fun BookDetailScreen(
 
 }
 
+
 @Composable
 fun HorizontalBookList(books: List<Book>, navController: NavController) {
     LazyRow(modifier = Modifier.padding(top = 8.dp)) {
@@ -356,7 +317,7 @@ fun HorizontalBookList(books: List<Book>, navController: NavController) {
             Column(
                 modifier = Modifier
                     .padding(end = 12.dp)
-                    .clickable { navController.navigate("book_detail/${book.title}/${book.id}") }
+                    .clickable { navController.navigate("book_details/${book.id}") }
             ) {
                 AsyncImage(
                     model = book.coverurl,
@@ -389,3 +350,49 @@ fun BookDetailRow(label: String, value: String) {
     }
 }
 
+@Composable
+fun ExpandableDescriptionSection(description: String) {
+    var isExpanded by remember { mutableStateOf(false) }
+
+    val animationProgress by animateFloatAsState(
+        targetValue = if (isExpanded) 1f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioHighBouncy,
+            stiffness = Spring.StiffnessMedium
+        ), label = "expandAnim"
+    )
+
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .animateContentSize()
+    ) {
+        Text(
+            text = description,
+            color = Color.LightGray,
+            maxLines = if (isExpanded) Int.MAX_VALUE else 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.graphicsLayer {
+                scaleY = 0.95f + (0.05f * animationProgress)
+                alpha = 0.8f + (0.2f * animationProgress)
+            }
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.clickable { isExpanded = !isExpanded }
+        ) {
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                contentDescription = null,
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = if (isExpanded) "Read less" else "Read more",
+                color = Color(0xFF90CAF9)
+            )
+        }
+    }
+}

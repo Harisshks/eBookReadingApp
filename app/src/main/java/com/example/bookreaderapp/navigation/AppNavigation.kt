@@ -1,315 +1,74 @@
-//package com.example.bookreaderapp.navigation
-//
-//
-//import android.net.Uri
-//import androidx.compose.foundation.layout.Box
-//import androidx.compose.foundation.layout.fillMaxSize
-//import androidx.compose.foundation.layout.padding
-//import androidx.compose.material.BottomNavigation
-//import androidx.compose.material.BottomNavigationItem
-//import androidx.compose.material.CircularProgressIndicator
-//import androidx.compose.material.Icon
-//import androidx.compose.material.Scaffold
-//import androidx.compose.material.Text
-//import androidx.compose.runtime.Composable
-//import androidx.compose.runtime.LaunchedEffect
-//import androidx.compose.runtime.collectAsState
-//import androidx.compose.runtime.getValue
-//import androidx.compose.runtime.mutableStateOf
-//import androidx.compose.runtime.remember
-//import androidx.compose.runtime.setValue
-//import androidx.compose.ui.Alignment
-//import androidx.compose.ui.Modifier
-//import androidx.compose.ui.graphics.Color
-//import androidx.lifecycle.viewmodel.compose.viewModel
-//import androidx.navigation.NavType
-//import androidx.navigation.compose.*
-//import androidx.compose.ui.unit.dp
-//import androidx.navigation.navArgument
-//import com.example.bookreaderapp.PdfViewerScreen
-//import com.example.bookreaderapp.ui.screens.BookDetailScreen
-//import com.example.bookreaderapp.ui.screens.EditProfileScreen
-//import com.example.bookreaderapp.ui.screens.GenreBooksScreen
-//import com.example.bookreaderapp.ui.screens.HomeScreen
-//import com.example.bookreaderapp.ui.screens.LibraryScreen
-//import com.example.bookreaderapp.ui.screens.LoginScreen
-//import com.example.bookreaderapp.ui.screens.ProfileScreen
-//import com.example.bookreaderapp.ui.screens.SettingsScreen
-//import com.example.bookreaderapp.ui.screens.SignupScreen
-//import com.example.bookreaderapp.ui.screens.WishlistScreen
-//import com.example.bookreaderapp.viewmodel.AuthViewModel
-//import com.example.bookreaderapp.viewmodel.BooksViewModel
-//import com.example.bookreaderapp.viewmodel.ProfileViewModel
-//
-//@Composable
-//fun AppNavigation() {
-//    val navController = rememberNavController()
-//    val booksViewModel: BooksViewModel = viewModel()
-//    val authViewModel: AuthViewModel = viewModel()
-//    val profileViewModel : ProfileViewModel = viewModel()
-//    val user by authViewModel.currentUser.collectAsState()
-//
-//    var startDestination by remember { mutableStateOf<String?>(null) }
-//
-//    // Set start destination based on authentication state
-//    LaunchedEffect(user) {
-//        startDestination = if (user == null) "login" else BottomNavItem.Home.route
-//    }
-//
-//    if (startDestination == null) {
-//        // Show loading screen while determining start destination
-//        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-//            CircularProgressIndicator()
-//        }
-//        return
-//    }
-//
-//    Scaffold(
-//        bottomBar = {
-//            if (user != null) {
-//                BottomNavigation(
-//                    backgroundColor = Color.Black,
-//                    contentColor = Color.White,
-//                    elevation = 8.dp
-//                ) {
-//                    val currentDestination = navController.currentBackStackEntryAsState().value?.destination
-//                    val bottomNavItems = listOf(
-//                        BottomNavItem.Home,
-//                        BottomNavItem.Library,
-//                        BottomNavItem.Wishlist,
-//                        BottomNavItem.Settings
-//                    )
-//
-//                    bottomNavItems.forEach { item ->
-//                        BottomNavigationItem(
-//                            icon = { Icon(item.icon, contentDescription = item.label) },
-//                            label = { Text(item.label) },
-//                            selected = currentDestination?.route == item.route,
-//                            onClick = {
-//                                navController.navigate(item.route) {
-//                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
-//                                    launchSingleTop = true
-//                                    restoreState = true
-//                                }
-//                            },
-//                            selectedContentColor = Color(0xFFFF9800),
-//                            unselectedContentColor = Color.Gray
-//                        )
-//                    }
-//                }
-//            }
-//        }
-//    ) { innerPadding ->
-//        NavHost(
-//            navController = navController,
-//            startDestination = startDestination!!,
-//            modifier = Modifier.padding(innerPadding)
-//        ) {
-//            // Login
-//            composable("login") {
-//                LoginScreen(navController = navController, authViewModel = authViewModel)
-//            }
-//
-//            // Signup
-//            composable("signup") {
-//                val profileViewModel: ProfileViewModel = viewModel()
-//                SignupScreen(
-//                    navController = navController,
-//                    authViewModel = authViewModel,
-//                    profileViewModel = profileViewModel
-//                )
-//            }
-//
-//
-//            // Home
-//            composable(BottomNavItem.Home.route) {
-//                HomeScreen(navController = navController, booksViewModel = booksViewModel, profileViewModel = profileViewModel)
-//            }
-//            composable("profile") {
-//                ProfileScreen(
-//                    profileViewModel = viewModel(),
-//                    onEditProfile = { navController.navigate("edit_profile") },
-//                    onLogout = {
-//                        profileViewModel.logout()
-//                        navController.navigate("login") {
-//                            popUpTo("home") { inclusive = true }
-//                        }
-//                    }
-//                )
-//            }
-//
-//            composable("edit_profile") {
-//                EditProfileScreen(
-//                    profileViewModel = viewModel(),
-//                    navController = navController
-//                )
-//            }
-//            composable("genre_books/{genre}") {
-//                val genre = it.arguments?.getString("genre") ?: ""
-//                GenreBooksScreen(navController, genre, booksViewModel , profileViewModel)
-//            }
-//
-//            // Library
-//            composable(BottomNavItem.Library.route) {
-//                LibraryScreen(booksViewModel,navController,profileViewModel)
-//            }
-//
-//            // Wishlist
-//            composable(BottomNavItem.Wishlist.route) {
-//                WishlistScreen(booksViewModel = booksViewModel, navController = navController,profileViewModel)
-//            }
-//
-//            // Settings
-//            composable(BottomNavItem.Settings.route) {
-//                SettingsScreen()
-//            }
-//
-//            // Book Detail
-//            composable(
-//                "book_detail/{title}/{bookId}",
-//                arguments = listOf(
-//                    navArgument("title") { type = NavType.StringType },
-//                    navArgument("bookId") { type = NavType.StringType }
-//                )
-//            ) { backStackEntry ->
-//                val title = backStackEntry.arguments?.getString("title") ?: ""
-//                val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
-//                val allBooksState = booksViewModel.books.collectAsState()
-//                val allBooks = allBooksState.value
-//                val selectedBook = allBooks.find { it.id == bookId }
-//
-//                selectedBook?.let { book ->
-//                    val lastReadPage = 0 // Replace with real value
-//                    BookDetailScreen(
-//                        book = book,
-//                        lastReadPage = lastReadPage,
-//                        navController = navController,
-//                        allBooks = allBooks,
-//                        booksViewModel = booksViewModel
-//                    )
-//                } ?: Box(
-//                    modifier = Modifier.fillMaxSize(),
-//                    contentAlignment = Alignment.Center
-//                ) {
-//                    CircularProgressIndicator()
-//                }
-//            }
-//
-//            // PDF Viewer
-//            composable(
-//                "pdf_view/{pdfUrlEncoded}/{bookId}",
-//                arguments = listOf(
-//                    navArgument("pdfUrlEncoded") { type = NavType.StringType },
-//                    navArgument("bookId") { type = NavType.StringType }
-//                )
-//            ) { backStackEntry ->
-//                val pdfUrl = Uri.decode(backStackEntry.arguments?.getString("pdfUrlEncoded") ?: "")
-//                val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
-//                PdfViewerScreen(pdfUrl = pdfUrl, bookId = bookId)
-//            }
-//        }
-//    }
-//}
-
+// AppNavigation.kt
 package com.example.bookreaderapp.navigation
 
 import android.net.Uri
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.BottomNavigation
+import androidx.compose.material.BottomNavigationItem
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
+import androidx.navigation.compose.*
 import androidx.navigation.navArgument
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.material.BottomNavigation
-import androidx.compose.material.BottomNavigationItem
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
 import com.example.bookreaderapp.PdfViewerScreen
-import com.example.bookreaderapp.ui.screens.BookDetailScreen
-import com.example.bookreaderapp.ui.screens.EditProfileScreen
-import com.example.bookreaderapp.ui.screens.GenreBooksScreen
-import com.example.bookreaderapp.ui.screens.HomeScreen
-import com.example.bookreaderapp.ui.screens.LibraryScreen
-import com.example.bookreaderapp.ui.screens.LoginScreen
-import com.example.bookreaderapp.ui.screens.ProfileScreen
-import com.example.bookreaderapp.ui.screens.SettingsScreen
-import com.example.bookreaderapp.ui.screens.SignupScreen
-import com.example.bookreaderapp.ui.screens.WishlistScreen
-import com.example.bookreaderapp.viewmodel.AuthViewModel
-import com.example.bookreaderapp.viewmodel.BooksViewModel
-import com.example.bookreaderapp.viewmodel.ProfileViewModel
-import com.google.accompanist.navigation.animation.AnimatedNavHost
-import com.google.accompanist.navigation.animation.rememberAnimatedNavController
+import com.example.bookreaderapp.ui.screens.*
+import com.example.bookreaderapp.viewmodel.*
 
-@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AppNavigation() {
-    val navController = rememberAnimatedNavController()
+    val navController = rememberNavController()
     val booksViewModel: BooksViewModel = viewModel()
     val authViewModel: AuthViewModel = viewModel()
-    val profileViewModel : ProfileViewModel = viewModel()
+    val profileViewModel: ProfileViewModel = viewModel()
+
     val user by authViewModel.currentUser.collectAsState()
+    val context = LocalContext.current
+    val googleAuthUiClient = remember { GoogleAuthUiClient(context) }
 
-    var startDestination by remember { mutableStateOf<String?>(null) }
+    val bottomNavItems = listOf(
+        BottomNavItem.Home,
+        BottomNavItem.Library,
+        BottomNavItem.Wishlist
+    )
 
-    LaunchedEffect(user) {
-        startDestination = if (user == null) "login" else BottomNavItem.Home.route
-    }
+    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = currentBackStackEntry?.destination?.route
+    val showBottomBar = user != null && bottomNavItems.any { it.route == currentRoute }
 
-    if (startDestination == null) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
-        }
-        return
+    // ✅ Decide startDestination only once based on auth state
+    val startDestination = remember(user) {
+        if (user == null) "welcome" else BottomNavItem.Home.route
     }
 
     Scaffold(
         bottomBar = {
-            if (user != null) {
+            if (showBottomBar) {
                 BottomNavigation(
                     backgroundColor = Color.Black,
                     contentColor = Color.White,
                     elevation = 8.dp
                 ) {
-                    val currentDestination = navController.currentBackStackEntryAsState().value?.destination
-                    val bottomNavItems = listOf(
-                        BottomNavItem.Home,
-                        BottomNavItem.Library,
-                        BottomNavItem.Wishlist,
-                        BottomNavItem.Settings
-                    )
-
                     bottomNavItems.forEach { item ->
                         BottomNavigationItem(
                             icon = { Icon(item.icon, contentDescription = item.label) },
                             label = { Text(item.label) },
-                            selected = currentDestination?.route == item.route,
+                            selected = currentRoute == item.route,
                             onClick = {
                                 navController.navigate(item.route) {
-                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
                             },
-                            selectedContentColor = Color(0xFFFF9800),
+                            selectedContentColor = Color(0xFF2196F3),
                             unselectedContentColor = Color.Gray
                         )
                     }
@@ -317,70 +76,112 @@ fun AppNavigation() {
             }
         }
     ) { innerPadding ->
-        AnimatedNavHost(
+        NavHost(
             navController = navController,
-            startDestination = startDestination!!,
-            modifier = Modifier.padding(innerPadding),
-            enterTransition = { fadeIn(animationSpec = tween(300)) },
-            exitTransition = { fadeOut(animationSpec = tween(300)) },
-            popEnterTransition = { slideInHorizontally(initialOffsetX = { 300 }, animationSpec = tween(300)) },
-            popExitTransition = { slideOutHorizontally(targetOffsetX = { -300 }, animationSpec = tween(300)) }
+            startDestination = startDestination,
+            modifier = Modifier.padding(innerPadding)
         ) {
-            composable("login") {
-                LoginScreen(navController = navController, authViewModel = authViewModel)
+            // 🆕 Welcome Screen
+            composable("welcome") {
+                WelcomeScreen(
+                    onLoginClick = { navController.navigate("login") },
+                    onSignupClick = { navController.navigate("signup") }
+                )
             }
+
+            // 🔐 Auth screens
+            composable("login") {
+                LoginScreen(
+                    navController = navController,
+                    googleAuthUiClient = googleAuthUiClient
+                )
+            }
+
             composable("signup") {
-                val profileViewModel: ProfileViewModel = viewModel()
                 SignupScreen(
                     navController = navController,
-                    authViewModel = authViewModel,
-                    profileViewModel = profileViewModel
+                    googleAuthUiClient = googleAuthUiClient
                 )
             }
+
+            // 🏠 Main app screens
             composable(BottomNavItem.Home.route) {
-                HomeScreen(navController = navController, booksViewModel = booksViewModel, profileViewModel = profileViewModel)
-            }
-            composable("profile") {
-                ProfileScreen(
-                    profileViewModel = viewModel(),
-                    onEditProfile = { navController.navigate("edit_profile") },
-                    onLogout = {
-                        profileViewModel.logout()
-                        navController.navigate("login") {
-                            popUpTo("home") { inclusive = true }
-                        }
-                    }
+                HomeScreen(
+                    navController,
+                    booksViewModel,
+                    profileViewModel,
+                    googleAuthUiClient
                 )
             }
-            composable("edit_profile") {
-                EditProfileScreen(
-                    profileViewModel = viewModel(),
-                    navController = navController
-                )
-            }
-            composable("genre_books/{genre}", arguments = listOf(navArgument("genre") { type = NavType.StringType })) {
-                val genre = it.arguments?.getString("genre") ?: ""
-                GenreBooksScreen(navController, genre, booksViewModel , profileViewModel)
-            }
+
             composable(BottomNavItem.Library.route) {
-                LibraryScreen(booksViewModel, navController, profileViewModel)
-            }
-            composable(BottomNavItem.Wishlist.route) {
-                WishlistScreen(booksViewModel = booksViewModel, navController = navController, profileViewModel)
-            }
-            composable(BottomNavItem.Settings.route) {
-                SettingsScreen()
-            }
-            composable("book_detail/{title}/{bookId}",
-                arguments = listOf(
-                    navArgument("title") { type = NavType.StringType },
-                    navArgument("bookId") { type = NavType.StringType }
+                LibraryScreen(
+                    booksViewModel,
+                    navController,
+                    profileViewModel,
+                    authViewModel,
+                    googleAuthUiClient
                 )
+            }
+
+            composable(BottomNavItem.Wishlist.route) {
+                WishlistScreen(
+                    booksViewModel,
+                    navController,
+                    profileViewModel,
+                    authViewModel,
+                    googleAuthUiClient
+                )
+            }
+
+            composable("edit_profile") {
+                EditProfileScreen(profileViewModel, navController)
+            }
+
+            composable("all_genres") {
+                AllGenreScreen(
+                    navController = navController,
+                    profileViewModel = profileViewModel,
+                    authViewModel = authViewModel,
+                    googleAuthUiClient = googleAuthUiClient
+                )
+            }
+
+            composable(
+                "genre_books/{genre}",
+                arguments = listOf(navArgument("genre") { type = NavType.StringType })
             ) { backStackEntry ->
-                val title = backStackEntry.arguments?.getString("title") ?: ""
+                val genreEncoded = backStackEntry.arguments?.getString("genre") ?: ""
+                val genre = Uri.decode(genreEncoded)
+                GenreBooksScreen(
+                    navController = navController,
+                    genre = genre,
+                    booksViewModel = booksViewModel,
+                    profileViewModel = profileViewModel,
+                    authViewModel = authViewModel,
+                    googleAuthUiClient = googleAuthUiClient
+                )
+            }
+
+            composable(
+                "category_books/{categories}",
+                arguments = listOf(navArgument("categories") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val category = backStackEntry.arguments?.getString("categories") ?: ""
+                CategoryBooksScreen(
+                    navController = navController,
+                    categories = category,
+                    booksViewModel = booksViewModel
+                )
+            }
+
+            // 📚 Book Details Screen
+            composable(
+                "book_details/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.StringType })
+            ) { backStackEntry ->
                 val bookId = backStackEntry.arguments?.getString("bookId") ?: ""
-                val allBooksState = booksViewModel.books.collectAsState()
-                val allBooks = allBooksState.value
+                val allBooks = booksViewModel.books.collectAsState().value
                 val selectedBook = allBooks.find { it.id == bookId }
 
                 selectedBook?.let { book ->
@@ -398,7 +199,10 @@ fun AppNavigation() {
                     CircularProgressIndicator()
                 }
             }
-            composable("pdf_view/{pdfUrlEncoded}/{bookId}",
+
+            // 📖 PDF Viewer Screen
+            composable(
+                "pdf_view/{pdfUrlEncoded}/{bookId}",
                 arguments = listOf(
                     navArgument("pdfUrlEncoded") { type = NavType.StringType },
                     navArgument("bookId") { type = NavType.StringType }

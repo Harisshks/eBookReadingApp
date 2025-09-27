@@ -34,12 +34,13 @@ class ProfileViewModel : ViewModel() {
                 db.collection("Profile").document(userId).get()
                     .addOnSuccessListener { document ->
                         if (document.exists()) {
+                            // Fetch existing profile with new fields
                             _profile.value = document.toObject(UserProfile::class.java)
                         } else {
-                            // Create empty profile if not found
+                            // Create a fallback profile with default values
                             val fallback = UserProfile(
                                 name = auth.currentUser?.displayName ?: "Reader",
-                                email = auth.currentUser?.email ?: ""
+                                email = auth.currentUser?.email ?: "",
                             )
                             db.collection("Profile").document(userId).set(fallback)
                             _profile.value = fallback
@@ -55,44 +56,6 @@ class ProfileViewModel : ViewModel() {
                 _isLoading.value = false
             }
         }
-    }
-
-    fun saveUserProfile(name: String, profileImageUrl: String = "") {
-        val userId = auth.currentUser?.uid ?: return
-        val email = auth.currentUser?.email ?: ""
-
-        val userProfile = UserProfile(name, email, profileImageUrl)
-
-        db.collection("Profile").document(userId).set(userProfile)
-            .addOnSuccessListener {
-                _profile.value = userProfile
-            }
-            .addOnFailureListener { exception ->
-                Log.e("ProfileViewModel", "Error saving profile: ", exception)
-            }
-    }
-
-    fun updateUserProfile(
-        name: String,
-        profileImageUrl: String = "",
-        onResult: () -> Unit
-    ) {
-        val userId = auth.currentUser?.uid ?: return
-
-        val data = mapOf(
-            "name" to name,
-            "profileImageUrl" to profileImageUrl
-        )
-
-        db.collection("Profile").document(userId)
-            .update(data)
-            .addOnSuccessListener {
-                fetchUserProfile()
-                onResult()
-            }
-            .addOnFailureListener { exception ->
-                Log.e("ProfileViewModel", "Error updating profile: ", exception)
-            }
     }
 
     fun updateProfile(
@@ -117,10 +80,28 @@ class ProfileViewModel : ViewModel() {
                 Log.e("ProfileViewModel", "Error updating profile: ", exception)
             }
     }
+//    fun toggleDarkMode(enabled: Boolean) {
+//        viewModelScope.launch {
+//            val userId = auth.currentUser?.uid
+//            if (userId != null) {
+//                _profile.value?.let { userProfile ->
+//                    // Update the local state
+//                    val updatedProfile = userProfile.copy(isDarkModeEnabled = enabled)
+//                    _profile.value = updatedProfile
+//
+//                    // Update Firestore
+//                    db.collection("Profile").document(userId)
+//                        .update("isDarkModeEnabled", enabled)
+//                        .addOnSuccessListener {
+//                            Log.d("ProfileViewModel", "Dark mode updated successfully")
+//                        }
+//                        .addOnFailureListener { exception ->
+//                            Log.e("ProfileViewModel", "Error updating dark mode: ", exception)
+//                        }
+//                }
+//            }
+//        }
+//    }
 
 
-    fun logout() {
-        auth.signOut()
-        _profile.value = null
-    }
 }

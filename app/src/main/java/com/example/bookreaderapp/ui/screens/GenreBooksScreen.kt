@@ -1,42 +1,54 @@
 package com.example.bookreaderapp.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.bookreaderapp.ui.components.BookCard
+import com.example.bookreaderapp.ui.components.ProfileDialog
+import com.example.bookreaderapp.ui.components.SearchAndProfileBar
+import com.example.bookreaderapp.viewmodel.AuthViewModel
 import com.example.bookreaderapp.viewmodel.BooksViewModel
+import com.example.bookreaderapp.viewmodel.GoogleAuthUiClient
 import com.example.bookreaderapp.viewmodel.ProfileViewModel
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 @Composable
 fun GenreBooksScreen(
     navController: NavController,
     genre: String,
     booksViewModel: BooksViewModel,
-    profileViewModel: ProfileViewModel
+    profileViewModel: ProfileViewModel,
+    authViewModel: AuthViewModel,
+    googleAuthUiClient: GoogleAuthUiClient
 ) {
     val books by booksViewModel.books.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
-    val profile = profileViewModel.profile.collectAsState().value
-    val initial = profile?.name?.firstOrNull()?.uppercase() ?: "H"
+    var showProfileDialog by remember { mutableStateOf(false) }
+    val profile by profileViewModel.profile.collectAsState()
 
 
-    val genreBooks = books.filter {
+    val filteredBooks = books.filter {
         it.genre == genre &&
                 (it.title.contains(searchQuery, ignoreCase = true) || it.author.contains(searchQuery, ignoreCase = true))
     }
@@ -47,46 +59,12 @@ fun GenreBooksScreen(
             .background(Color.Black)
             .padding(16.dp)
     ) {
-        // 🔍 Search + Profile
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Search books...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true,
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.Black,
-                    unfocusedContainerColor = Color.Black,
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    cursorColor = Color.White,
-                    focusedPlaceholderColor = Color.Gray,
-                    unfocusedPlaceholderColor = Color.Gray,
-                    focusedBorderColor = Color.Gray,
-                    unfocusedBorderColor = Color.Gray
-                )
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF2196F3))
-                    .clickable { navController.navigate("profile") },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(text = initial, color = Color.White, fontWeight = FontWeight.Bold)
-            }
-        }
+        SearchAndProfileBar(
+            profile = profile,
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
+            onProfileClick = { showProfileDialog = true }
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -103,11 +81,40 @@ fun GenreBooksScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(genreBooks) { book ->
-                BookCard(book = book,onClick= {
-                    navController.navigate("book_detail/${book.title}/${book.id}")
+            items(filteredBooks) { book ->
+                BookCard(book = book, onClick = {
+                    navController.navigate("book_details/${book.id}")
                 })
             }
         }
     }
+
+    // Profile Dialog
+    if (showProfileDialog) {
+        val profile = profileViewModel.profile.collectAsState().value
+        ProfileDialog(
+            profile = profile,
+            onDismiss = { showProfileDialog = false },
+            onLogout = {
+                authViewModel.logout()
+
+                CoroutineScope(Dispatchers.Main).launch {
+                    googleAuthUiClient.signOut()
+                }
+
+                navController.navigate("login") {
+                    popUpTo("all_genres") { inclusive = true }
+                }
+                showProfileDialog = false
+            },
+            onLibraryClick = {
+                navController.navigate("library") {
+                    launchSingleTop = true
+                }
+                showProfileDialog = false
+            },
+            googleAuthUiClient = googleAuthUiClient
+        )
+    }
+
 }
